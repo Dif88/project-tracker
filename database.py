@@ -8,12 +8,12 @@ load_dotenv()
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 def get_db_connection():
-    conn = psycopg2.connect(DATABASE_URL)
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
     return conn
 
 def dict_cursor(conn):
-    return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
+    return conn.cursor()
+    
 def init_db(force_recreate=False):
     conn = get_db_connection()
     cursor = dict_cursor(conn)
