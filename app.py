@@ -41,7 +41,6 @@ def add_project():
     status = request.form.get('status', 'Not Started')
     tag = request.form.get('tag', 'Other')
     
-    # Simple validation
     if not title or not start_date or not end_date:
         return redirect(url_for('index'))
         
@@ -54,7 +53,7 @@ def add_project():
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO projects (title, type, start_date, end_date, earnings, status, tag)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
     ''', (title, project_type, start_date, end_date, earnings, status, tag))
     conn.commit()
     conn.close()
@@ -83,8 +82,8 @@ def edit_project(project_id):
     cursor = conn.cursor()
     cursor.execute('''
         UPDATE projects
-        SET title = ?, type = ?, start_date = ?, end_date = ?, earnings = ?, status = ?, tag = ?
-        WHERE id = ?
+        SET title = %s, type = %s, start_date = %s, end_date = %s, earnings = %s, status = %s, tag = %s
+        WHERE id = %s
     ''', (title, project_type, start_date, end_date, earnings, status, tag, project_id))
     conn.commit()
     conn.close()
@@ -95,7 +94,7 @@ def edit_project(project_id):
 def delete_project(project_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM projects WHERE id = ?", (project_id,))
+    cursor.execute("DELETE FROM projects WHERE id = %s", (project_id,))
     conn.commit()
     conn.close()
     return redirect(url_for('index'))
@@ -110,10 +109,8 @@ def export_csv():
     
     si = StringIO()
     cw = csv.writer(si)
-    # Write CSV Header
     cw.writerow(['ID', 'Project Title', 'Type', 'Start Date', 'End Date', 'Earnings', 'Status', 'Tag'])
     
-    # Write Row Data
     for row in rows:
         cw.writerow([
             row['id'],
@@ -135,20 +132,20 @@ def project_detail(project_id):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM projects WHERE id = ?", (project_id,))
+    cursor.execute("SELECT * FROM projects WHERE id = %s", (project_id,))
     project = cursor.fetchone()
 
     if not project:
         conn.close()
         return redirect(url_for('index'))
 
-    cursor.execute("SELECT * FROM team_members WHERE project_id = ? ORDER BY name", (project_id,))
+    cursor.execute("SELECT * FROM team_members WHERE project_id = %s ORDER BY name", (project_id,))
     team_members = cursor.fetchall()
 
-    cursor.execute("SELECT * FROM team_activities WHERE project_id = ? ORDER BY activity_date DESC", (project_id,))
+    cursor.execute("SELECT * FROM team_activities WHERE project_id = %s ORDER BY activity_date DESC", (project_id,))
     activities = cursor.fetchall()
 
-    cursor.execute("SELECT * FROM project_expenses WHERE project_id = ? ORDER BY expense_date DESC", (project_id,))
+    cursor.execute("SELECT * FROM project_expenses WHERE project_id = %s ORDER BY expense_date DESC", (project_id,))
     expenses = cursor.fetchall()
 
     total_expenses = sum(e['amount'] for e in expenses)
@@ -177,7 +174,7 @@ def add_team_member(project_id):
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO team_members (project_id, name, email, role)
-        VALUES (?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s)
     ''', (project_id, name, email, role))
     conn.commit()
     conn.close()
@@ -188,7 +185,7 @@ def add_team_member(project_id):
 def delete_team_member(member_id, project_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM team_members WHERE id = ?", (member_id,))
+    cursor.execute("DELETE FROM team_members WHERE id = %s", (member_id,))
     conn.commit()
     conn.close()
 
@@ -215,7 +212,7 @@ def add_activity(project_id):
     if not member_name and member_id:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT name FROM team_members WHERE id = ?", (member_id,))
+        cursor.execute("SELECT name FROM team_members WHERE id = %s", (member_id,))
         member = cursor.fetchone()
         member_name = member['name'] if member else 'Unknown'
         conn.close()
@@ -224,7 +221,7 @@ def add_activity(project_id):
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO team_activities (project_id, team_member_id, member_name, task_description, activity_date, activity_time, hours_spent, logged_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     ''', (project_id, member_id, member_name, task_description, activity_date, activity_time, hours, logged_by))
     conn.commit()
     conn.close()
@@ -235,7 +232,7 @@ def add_activity(project_id):
 def delete_activity(activity_id, project_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM team_activities WHERE id = ?", (activity_id,))
+    cursor.execute("DELETE FROM team_activities WHERE id = %s", (activity_id,))
     conn.commit()
     conn.close()
 
@@ -261,7 +258,7 @@ def add_expense(project_id):
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO project_expenses (project_id, amount, category, description, expense_date, vendor)
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s)
     ''', (project_id, amt, category, description, expense_date, vendor))
     conn.commit()
     conn.close()
@@ -272,7 +269,7 @@ def add_expense(project_id):
 def delete_expense(expense_id, project_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM project_expenses WHERE id = ?", (expense_id,))
+    cursor.execute("DELETE FROM project_expenses WHERE id = %s", (expense_id,))
     conn.commit()
     conn.close()
 
@@ -283,7 +280,6 @@ def api_data():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # 1. Fetch Freelance projects data for combo chart (individual + cumulative earnings)
     cursor.execute("SELECT title, earnings FROM projects WHERE type = 'Freelance' ORDER BY start_date ASC")
     freelance_rows = cursor.fetchall()
 
@@ -299,7 +295,6 @@ def api_data():
         running_total += earnings
         freelance_cumulative.append(running_total)
 
-    # 2. Fetch Project Types counts (Personal vs Freelance)
     cursor.execute("SELECT type, COUNT(*) as count FROM projects GROUP BY type")
     type_rows = cursor.fetchall()
     type_counts = {"Personal": 0, "Freelance": 0}
@@ -309,7 +304,6 @@ def api_data():
     type_labels = list(type_counts.keys())
     type_values = list(type_counts.values())
 
-    # 3. Fetch Timeline Schedule data (all projects, ordered chronologically by start date)
     cursor.execute("SELECT title, start_date, end_date, status, type FROM projects ORDER BY start_date ASC")
     timeline_rows = cursor.fetchall()
     timeline_data = []
