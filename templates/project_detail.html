@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ project.title }} | Project Tracker Dashboard</title>
+
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            slate: {
+              950: '#0b0f19',
+              900: '#111827',
+              800: '#1f2937',
+              700: '#374151',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="bg-slate-950 text-slate-100 dark:bg-slate-950 dark:text-slate-100 min-h-full font-sans antialiased flex flex-col selection:bg-indigo-500/30 selection:text-indigo-200 transition-colors duration-300">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40 transition-colors duration-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <a href="{{ url_for('index') }}" class="text-slate-400 hover:text-white transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+        </a>
+        <div>
+          <h1 class="text-xl font-extrabold tracking-tight text-white">{{ project.title }}</h1>
+          <p class="text-xs text-slate-500 font-medium">{{ project.type }} Project • {{ project.status }}</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Wrapper -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- Project Overview Cards -->
+    <section aria-label="Project Overview" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 backdrop-blur-md">
+        <div class="text-xs text-slate-400 font-semibold mb-2">Timeline</div>
+        <div class="text-sm text-slate-300">{{ project.start_date }} → {{ project.end_date }}</div>
+      </div>
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 backdrop-blur-md">
+        <div class="text-xs text-slate-400 font-semibold mb-2">Status</div>
+        <div class="text-sm font-semibold {% if project.status == 'Completed' %}text-emerald-400{% elif project.status == 'In Progress' %}text-amber-400{% else %}text-slate-400{% endif %}">{{ project.status }}</div>
+      </div>
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 backdrop-blur-md">
+        <div class="text-xs text-slate-400 font-semibold mb-2">Tag</div>
+        <div class="text-sm text-slate-300">{{ project.tag }}</div>
+      </div>
+      {% if project.type == 'Freelance' %}
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 backdrop-blur-md">
+        <div class="text-xs text-slate-400 font-semibold mb-2">Earnings</div>
+        <div class="text-sm font-semibold text-emerald-400">${{ "{:,.2f}".format(project.earnings) }}</div>
+      </div>
+      {% else %}
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 backdrop-blur-md">
+        <div class="text-xs text-slate-400 font-semibold mb-2">Team Size</div>
+        <div class="text-sm font-semibold text-indigo-400">{{ team_members|length }} member(s)</div>
+      </div>
+      {% endif %}
+    </section>
+
+    <!-- Team Members Section -->
+    <section aria-label="Team Members" class="rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur-md overflow-hidden flex flex-col">
+      <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-bold text-white tracking-wide">Team Members</h2>
+          <p class="text-xs text-slate-500 mt-1">Manage team members and track contributions.</p>
+        </div>
+        <button
+          id="btn-open-add-member-dialog"
+          class="px-4 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 text-white hover:shadow-lg hover:shadow-indigo-500/20 transition-all"
+        >
+          Add Member
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left">
+          <thead>
+            <tr class="border-b border-slate-800/60 bg-slate-950/20 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <th class="py-4 px-6">Name</th>
+              <th class="py-4 px-6">Email</th>
+              <th class="py-4 px-6">Role</th>
+              <th class="py-4 px-6 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/40 text-sm">
+            {% if team_members %}
+              {% for member in team_members %}
+                <tr class="hover:bg-slate-900/40 transition-colors">
+                  <td class="py-4 px-6 font-semibold text-white">{{ member.name }}</td>
+                  <td class="py-4 px-6 text-slate-400">{{ member.email or '—' }}</td>
+                  <td class="py-4 px-6"><span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-300">{{ member.role }}</span></td>
+                  <td class="py-4 px-6 text-center">
+                    <form action="{{ url_for('delete_team_member', member_id=member.id, project_id=project.id) }}" method="POST" class="inline delete-form">
+                      <button type="submit" class="text-slate-500 hover:text-rose-400 transition-colors p-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="4" class="py-8 text-center text-slate-500">No team members added yet.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Team Activities Section -->
+    <section aria-label="Team Activities" class="rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur-md overflow-hidden flex flex-col">
+      <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-bold text-white tracking-wide">Team Activities</h2>
+          <p class="text-xs text-slate-500 mt-1">Log work activities, tasks, and time spent.</p>
+        </div>
+        <button
+          id="btn-open-add-activity-dialog"
+          class="px-4 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 text-white hover:shadow-lg hover:shadow-indigo-500/20 transition-all"
+        >
+          Log Activity
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left">
+          <thead>
+            <tr class="border-b border-slate-800/60 bg-slate-950/20 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <th class="py-4 px-6">Team Member</th>
+              <th class="py-4 px-6">Task</th>
+              <th class="py-4 px-6">Date</th>
+              <th class="py-4 px-6">Hours</th>
+              <th class="py-4 px-6 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/40 text-sm">
+            {% if activities %}
+              {% for activity in activities %}
+                <tr class="hover:bg-slate-900/40 transition-colors">
+                  <td class="py-4 px-6 font-semibold text-white">{{ activity.member_name }}</td>
+                  <td class="py-4 px-6 text-slate-300 max-w-xs truncate">{{ activity.task_description }}</td>
+                  <td class="py-4 px-6 text-slate-400">{{ activity.activity_date }}{% if activity.activity_time %} {{ activity.activity_time }}{% endif %}</td>
+                  <td class="py-4 px-6 text-slate-300">{{ activity.hours_spent }}h</td>
+                  <td class="py-4 px-6 text-center">
+                    <form action="{{ url_for('delete_activity', activity_id=activity.id, project_id=project.id) }}" method="POST" class="inline delete-form">
+                      <button type="submit" class="text-slate-500 hover:text-rose-400 transition-colors p-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="5" class="py-8 text-center text-slate-500">No activities logged yet.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Project Expenses Section -->
+    <section aria-label="Project Expenses" class="rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur-md overflow-hidden flex flex-col">
+      <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-bold text-white tracking-wide">Project Expenses</h2>
+          <p class="text-xs text-slate-500 mt-1">Track spending on tools, services, and resources.</p>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="text-right">
+            <div class="text-xs text-slate-400 font-semibold">Total Expenses</div>
+            <div class="text-2xl font-bold text-emerald-400">${{ "{:,.2f}".format(total_expenses) }}</div>
+          </div>
+          <button
+            id="btn-open-add-expense-dialog"
+            class="px-4 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:shadow-lg hover:shadow-emerald-500/20 transition-all"
+          >
+            Add Expense
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left">
+          <thead>
+            <tr class="border-b border-slate-800/60 bg-slate-950/20 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <th class="py-4 px-6">Category</th>
+              <th class="py-4 px-6">Description</th>
+              <th class="py-4 px-6">Vendor</th>
+              <th class="py-4 px-6">Date</th>
+              <th class="py-4 px-6 text-right">Amount</th>
+              <th class="py-4 px-6 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/40 text-sm">
+            {% if expenses %}
+              {% for expense in expenses %}
+                <tr class="hover:bg-slate-900/40 transition-colors">
+                  <td class="py-4 px-6">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-300">
+                      {{ expense.category }}
+                    </span>
+                  </td>
+                  <td class="py-4 px-6 text-slate-300 max-w-xs truncate">{{ expense.description or '—' }}</td>
+                  <td class="py-4 px-6 text-slate-400">{{ expense.vendor or '—' }}</td>
+                  <td class="py-4 px-6 text-slate-400 font-mono text-xs">{{ expense.expense_date }}</td>
+                  <td class="py-4 px-6 text-right font-mono font-semibold text-emerald-400">${{ "{:,.2f}".format(expense.amount) }}</td>
+                  <td class="py-4 px-6 text-center">
+                    <form action="{{ url_for('delete_expense', expense_id=expense.id, project_id=project.id) }}" method="POST" class="inline delete-form">
+                      <button type="submit" class="text-slate-500 hover:text-rose-400 transition-colors p-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="6" class="py-8 text-center text-slate-500">No expenses logged yet.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-900 bg-slate-950/60 py-6 text-center text-xs text-slate-600 font-medium">
+    <div class="max-w-7xl mx-auto px-4">
+      &copy; 2026 Vantyron Consulting. Project Tracker with Team & Finance Management.
+    </div>
+  </footer>
+
+  <!-- Dialog: Add Team Member Modal -->
+  <dialog id="dialog-add-member" class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-lg w-full p-6 text-slate-100 backdrop:bg-slate-950/80 backdrop:backdrop-blur-sm focus:outline-none">
+    <div class="flex justify-between items-center pb-4 border-b border-slate-800">
+      <h2 class="text-lg font-bold text-white">Add Team Member</h2>
+      <button type="button" class="btn-close-dialog text-slate-400 hover:text-white">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <form action="{{ url_for('add_team_member', project_id=project.id) }}" method="POST" class="mt-4 space-y-4">
+      <div class="flex flex-col gap-1.5">
+        <label for="member-name" class="text-xs font-bold uppercase tracking-wider text-slate-400">Full Name</label>
+        <input type="text" id="member-name" name="name" required placeholder="John Doe" class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="member-email" class="text-xs font-bold uppercase tracking-wider text-slate-400">Email</label>
+        <input type="email" id="member-email" name="email" placeholder="john@example.com" class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="member-role" class="text-xs font-bold uppercase tracking-wider text-slate-400">Role</label>
+        <input type="text" id="member-role" name="role" placeholder="e.g. Developer, Designer" value="Developer" class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+        <button type="button" class="btn-close-dialog px-4 py-2.5 rounded-xl border border-slate-800 text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800">Cancel</button>
+        <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 text-sm font-semibold text-white">Add Member</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Dialog: Add Activity Modal -->
+  <dialog id="dialog-add-activity" class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-lg w-full p-6 text-slate-100 backdrop:bg-slate-950/80 backdrop:backdrop-blur-sm focus:outline-none">
+    <div class="flex justify-between items-center pb-4 border-b border-slate-800">
+      <h2 class="text-lg font-bold text-white">Log Activity</h2>
+      <button type="button" class="btn-close-dialog text-slate-400 hover:text-white">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <form action="{{ url_for('add_activity', project_id=project.id) }}" method="POST" class="mt-4 space-y-4">
+      <div class="flex flex-col gap-1.5">
+        <label for="activity-member" class="text-xs font-bold uppercase tracking-wider text-slate-400">Team Member (Optional)</label>
+        <select id="activity-member" name="team_member_id" class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+          <option value="">Select or enter name manually</option>
+          {% for member in team_members %}
+            <option value="{{ member.id }}">{{ member.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="activity-name" class="text-xs font-bold uppercase tracking-wider text-slate-400">Member Name (if not selected)</label>
+        <input type="text" id="activity-name" name="member_name" placeholder="Team member name" class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="activity-task" class="text-xs font-bold uppercase tracking-wider text-slate-400">Task Description</label>
+        <textarea id="activity-task" name="task_description" required placeholder="e.g. Implemented API endpoint" rows="3" class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none"></textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="flex flex-col gap-1.5">
+          <label for="activity-date" class="text-xs font-bold uppercase tracking-wider text-slate-400">Date</label>
+          <input type="date" id="activity-date" name="activity_date" required class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="activity-time" class="text-xs font-bold uppercase tracking-wider text-slate-400">Time (Optional)</label>
+          <input type="time" id="activity-time" name="activity_time" class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="activity-hours" class="text-xs font-bold uppercase tracking-wider text-slate-400">Hours Spent</label>
+        <input type="number" id="activity-hours" name="hours_spent" value="1" min="0.5" step="0.5" class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+        <button type="button" class="btn-close-dialog px-4 py-2.5 rounded-xl border border-slate-800 text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800">Cancel</button>
+        <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 text-sm font-semibold text-white">Log Activity</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Dialog: Add Expense Modal -->
+  <dialog id="dialog-add-expense" class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-lg w-full p-6 text-slate-100 backdrop:bg-slate-950/80 backdrop:backdrop-blur-sm focus:outline-none">
+    <div class="flex justify-between items-center pb-4 border-b border-slate-800">
+      <h2 class="text-lg font-bold text-white">Add Expense</h2>
+      <button type="button" class="btn-close-dialog text-slate-400 hover:text-white">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <form action="{{ url_for('add_expense', project_id=project.id) }}" method="POST" class="mt-4 space-y-4">
+      <div class="flex flex-col gap-1.5">
+        <label for="expense-amount" class="text-xs font-bold uppercase tracking-wider text-slate-400">Amount ($)</label>
+        <input type="number" id="expense-amount" name="amount" required step="0.01" min="0" placeholder="0.00" class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500">
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="expense-category" class="text-xs font-bold uppercase tracking-wider text-slate-400">Category</label>
+        <select id="expense-category" name="category" required class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500">
+          <option value="Tools">Tools</option>
+          <option value="Hosting">Hosting</option>
+          <option value="Software">Software</option>
+          <option value="Hardware">Hardware</option>
+          <option value="Services">Services</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="expense-vendor" class="text-xs font-bold uppercase tracking-wider text-slate-400">Vendor/Company</label>
+        <input type="text" id="expense-vendor" name="vendor" placeholder="e.g. AWS, GitHub, Adobe" class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500">
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="expense-description" class="text-xs font-bold uppercase tracking-wider text-slate-400">Description</label>
+        <textarea id="expense-description" name="description" placeholder="e.g. Monthly subscription" rows="2" class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 resize-none"></textarea>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="expense-date" class="text-xs font-bold uppercase tracking-wider text-slate-400">Date</label>
+        <input type="date" id="expense-date" name="expense_date" required class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500">
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+        <button type="button" class="btn-close-dialog px-4 py-2.5 rounded-xl border border-slate-800 text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800">Cancel</button>
+        <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-sm font-semibold text-white">Add Expense</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Dialog Scripts -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const dialogs = {
+        member: document.getElementById('dialog-add-member'),
+        activity: document.getElementById('dialog-add-activity'),
+        expense: document.getElementById('dialog-add-expense')
+      };
+
+      const buttons = {
+        member: document.getElementById('btn-open-add-member-dialog'),
+        activity: document.getElementById('btn-open-add-activity-dialog'),
+        expense: document.getElementById('btn-open-add-expense-dialog')
+      };
+
+      Object.entries(buttons).forEach(([key, btn]) => {
+        if (btn) {
+          btn.addEventListener('click', () => {
+            dialogs[key]?.showModal();
+          });
+        }
+      });
+
+      document.querySelectorAll('.btn-close-dialog').forEach(btn => {
+        btn.addEventListener('click', () => {
+          dialogs.member?.close();
+          dialogs.activity?.close();
+          dialogs.expense?.close();
+        });
+      });
+
+      // Set today's date as default
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('activity-date').value = today;
+      document.getElementById('expense-date').value = today;
+
+      // Delete confirmations
+      document.querySelectorAll('.delete-form').forEach(form => {
+        form.addEventListener('submit', (e) => {
+          if (!confirm('Are you sure? This action cannot be undone.')) {
+            e.preventDefault();
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>
