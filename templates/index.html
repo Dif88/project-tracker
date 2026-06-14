@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title> P.T.D | Project Tracker Dashboard</title>
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            slate: {
+              950: '#0b0f19',
+              900: '#111827',
+              800: '#1f2937',
+              700: '#374151',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="bg-slate-950 text-slate-100 dark:bg-slate-950 dark:text-slate-100 min-h-full font-sans antialiased flex flex-col selection:bg-indigo-500/30 selection:text-indigo-200 transition-colors duration-300">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40 transition-colors duration-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 002 2h2a2 2 0 002-2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent" id="brand-header">P.T.D</h1>
+          <p class="text-xs text-slate-500 font-medium">Project Tracker & Analytics</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <!-- Dark/Light Theme Toggle -->
+        <button 
+          id="btn-theme-toggle" 
+          class="p-2.5 rounded-xl border border-slate-800 bg-slate-900/40 text-slate-400 hover:text-white hover:border-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-950"
+          title="Toggle color theme"
+          aria-label="Toggle color theme"
+        >
+          <!-- Sun Icon (visible in light mode) -->
+          <svg id="theme-sun" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1M12 20v1M4.22 4.22l.71.71M18.36 18.36l.71.71M1.5 12h1M20.5 12h1M4.22 19.78l.71-.71M18.36 5.64l.71-.71M12 8a4 4 0 100 8 4 4 0 000-8z"></path>
+          </svg>
+          <!-- Moon Icon (visible in dark mode) -->
+          <svg id="theme-moon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+          </svg>
+        </button>
+
+        <!-- Add Project Button -->
+        <button 
+          id="btn-open-add-dialog" 
+          class="relative group overflow-hidden rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition-all duration-300 hover:shadow-indigo-500/35 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-950"
+        >
+          <span class="relative flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Add New Project
+          </span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Wrapper -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    
+    <!-- Top Row: Metrics Cards -->
+    <section aria-label="Key Metrics" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      
+      <!-- Total Projects -->
+      <div class="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/40 p-6 backdrop-blur-md transition-all duration-300 hover:border-slate-700/80 group">
+        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-colors duration-300"></div>
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-semibold text-slate-400">Total Projects</span>
+          <div class="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="mt-4 flex items-baseline gap-2">
+          <span class="text-3xl font-bold tracking-tight text-white dark:text-white">{{ total_projects }}</span>
+          <span class="text-xs text-slate-500 font-medium">all activities</span>
+        </div>
+      </div>
+
+      <!-- Total Freelance Earnings -->
+      <div class="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/40 p-6 backdrop-blur-md transition-all duration-300 hover:border-slate-700/80 group">
+        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-colors duration-300"></div>
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-semibold text-slate-400">Freelance Revenue</span>
+          <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="mt-4 flex items-baseline gap-2">
+          <span class="text-3xl font-bold tracking-tight text-emerald-400">${{ "{:,.2f}".format(total_freelance_earnings) }}</span>
+          <span class="text-xs text-slate-500 font-medium">gross freelance</span>
+        </div>
+      </div>
+
+      <!-- Active Personal Projects -->
+      <div class="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/40 p-6 backdrop-blur-md transition-all duration-300 hover:border-slate-700/80 group">
+        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-violet-500/5 rounded-full blur-2xl group-hover:bg-violet-500/10 transition-colors duration-300"></div>
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-semibold text-slate-400">Active Personal Projects</span>
+          <div class="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="mt-4 flex items-baseline gap-2">
+          <span class="text-3xl font-bold tracking-tight text-white dark:text-white">{{ active_personal_projects }}</span>
+          <span class="text-xs text-slate-500 font-medium">in progress</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Middle Row: Analytics / Charts -->
+    <section aria-label="Project Analytics" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Freelance Earnings Combo Chart (Takes 2 columns) -->
+      <div class="lg:col-span-2 rounded-2xl border border-slate-800 bg-slate-900/40 p-6 backdrop-blur-md flex flex-col justify-between h-96">
+        <div>
+          <h2 class="text-base font-bold text-white dark:text-white tracking-wide">Freelance Revenue & Growth</h2>
+          <p class="text-xs text-slate-500 mt-1">Individual project earnings (bar) and cumulative growth trend (line).</p>
+        </div>
+        <div class="flex-grow relative mt-4 h-64">
+          <canvas id="chart-earnings"></canvas>
+        </div>
+      </div>
+
+      <!-- Projects Categories Ratio (Takes 1 column) -->
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 backdrop-blur-md flex flex-col justify-between h-96">
+        <div>
+          <h2 class="text-base font-bold text-white dark:text-white tracking-wide">Project Allocation</h2>
+          <p class="text-xs text-slate-500 mt-1">Ratio of Freelance vs. Personal projects.</p>
+        </div>
+        <div class="flex-grow relative mt-4 h-64 flex items-center justify-center">
+          <div class="w-full h-full max-h-[220px]">
+            <canvas id="chart-ratio"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Schedule Timeline Row -->
+    <section aria-label="Schedule Timeline" class="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 backdrop-blur-md flex flex-col justify-between min-h-[350px]">
+      <div>
+        <h2 class="text-base font-bold text-white dark:text-white tracking-wide">Project Schedule Timeline</h2>
+        <p class="text-xs text-slate-500 mt-1">Horizontal Gantt-style timeline visualization tracking start to end dates.</p>
+      </div>
+      <div class="flex-grow relative mt-6 min-h-[240px]">
+        <canvas id="chart-timeline"></canvas>
+      </div>
+    </section>
+
+    <!-- Bottom Row: Ledger Table -->
+    <section aria-label="Project Ledger" class="rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur-md overflow-hidden flex flex-col">
+      <div class="p-6 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-white dark:text-white tracking-wide">Project Ledger</h2>
+          <p class="text-xs text-slate-500 mt-1">Manage and track your active, complete, and upcoming tasks.</p>
+        </div>
+        
+        <div class="flex items-center gap-4 w-full sm:w-auto">
+          <!-- CSV Export Button -->
+          <a 
+            href="/export" 
+            class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-slate-800 bg-slate-950/60 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            title="Export database projects to CSV"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+            Export CSV
+          </a>
+
+          <!-- Search bar for client filtering -->
+          <search class="w-full sm:w-64">
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+              </div>
+              <label for="ledger-search" class="sr-only">Search projects</label>
+              <input 
+                type="search" 
+                id="ledger-search" 
+                placeholder="Search projects..." 
+                class="w-full rounded-xl bg-slate-950/80 border border-slate-800 pl-10 pr-4 py-2 text-sm text-slate-300 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+              >
+            </div>
+          </search>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table id="table-ledger" class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-slate-800/60 bg-slate-950/20 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <th scope="col" class="py-4 px-6">Project Title</th>
+              <th scope="col" class="py-4 px-6">Tag</th>
+              <th scope="col" class="py-4 px-6">Type</th>
+              <th scope="col" class="py-4 px-6">Timeline</th>
+              <th scope="col" class="py-4 px-6">Status</th>
+              <th scope="col" class="py-4 px-6 text-right">Earnings</th>
+              <th scope="col" class="py-4 px-6 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/40 text-sm">
+            {% if projects %}
+              {% for project in projects %}
+                <tr class="hover:bg-slate-900/40 transition-colors duration-150 group/row" data-project-id="{{ project.id }}">
+                  <td class="py-4 px-6 font-semibold text-white dark:text-white max-w-xs truncate" data-field="title">{{ project.title }}</td>
+                  <!-- New Tag Column -->
+                  <td class="py-4 px-6">
+                    <span 
+                      data-field="tag"
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border tag-badge"
+                      data-tag-name="{{ project.tag }}"
+                    >
+                      {{ project.tag }}
+                    </span>
+                  </td>
+                  <td class="py-4 px-6">
+                    <span 
+                      data-field="type"
+                      class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border
+                      {% if project.type == 'Freelance' %}
+                        bg-emerald-500/10 text-emerald-400 border-emerald-500/20
+                      {% else %}
+                        bg-indigo-500/10 text-indigo-400 border-indigo-500/20
+                      {% endif %}"
+                    >
+                      {{ project.type }}
+                    </span>
+                  </td>
+                  <td class="py-4 px-6 text-slate-400 font-mono text-xs">
+                    <div class="flex items-center gap-1.5">
+                      <span data-field="start_date">{{ project.start_date }}</span>
+                      <span class="text-slate-600">&rarr;</span>
+                      <span data-field="end_date">{{ project.end_date }}</span>
+                    </div>
+                  </td>
+                  <td class="py-4 px-6">
+                    <span 
+                      data-field="status"
+                      class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold
+                      {% if project.status == 'Completed' %}
+                        bg-emerald-500/10 text-emerald-400
+                      {% elif project.status == 'In Progress' %}
+                        bg-amber-500/10 text-amber-400
+                      {% else %}
+                        bg-slate-800 text-slate-400
+                      {% endif %}"
+                    >
+                      <span class="w-1.5 h-1.5 rounded-full 
+                        {% if project.status == 'Completed' %}
+                          bg-emerald-400
+                        {% elif project.status == 'In Progress' %}
+                          bg-amber-400
+                        {% else %}
+                          bg-slate-500
+                        {% endif %}"
+                      ></span>
+                      {{ project.status }}
+                    </span>
+                  </td>
+                  <td class="py-4 px-6 text-right font-mono font-medium {% if project.type == 'Freelance' %}text-emerald-400{% else %}text-slate-500{% endif %}">
+                    <span data-field="earnings">
+                      {% if project.type == 'Freelance' %}
+                        ${{ "{:,.2f}".format(project.earnings) }}
+                      {% else %}
+                        &mdash;
+                      {% endif %}
+                    </span>
+                  </td>
+                  <td class="py-4 px-6 text-center">
+                    <div class="flex items-center justify-center gap-2">
+                      <!-- View Details -->
+                      <a
+                        href="{{ url_for('project_detail', project_id=project.id) }}"
+                        class="text-slate-400 hover:text-indigo-400 transition-colors duration-150 p-1 rounded hover:bg-slate-800"
+                        title="View Project Details"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                      </a>
+
+                      <!-- Edit trigger -->
+                      <button
+                        type="button"
+                        class="btn-edit-trigger text-slate-400 hover:text-white transition-colors duration-150 p-1 rounded hover:bg-slate-800"
+                        title="Edit Project"
+                        data-id="{{ project.id }}"
+                        data-title="{{ project.title }}"
+                        data-type="{{ project.type }}"
+                        data-start-date="{{ project.start_date }}"
+                        data-end-date="{{ project.end_date }}"
+                        data-earnings="{{ project.earnings }}"
+                        data-status="{{ project.status }}"
+                        data-tag="{{ project.tag }}"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                        </svg>
+                      </button>
+
+                      <!-- Delete form -->
+                      <form action="{{ url_for('delete_project', project_id=project.id) }}" method="POST" class="inline delete-form">
+                        <button
+                          type="submit"
+                          class="text-slate-500 hover:text-rose-400 transition-colors duration-150 p-1 rounded hover:bg-slate-800"
+                          title="Delete Project"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                          </svg>
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="7" class="py-12 text-center text-slate-500 font-medium">
+                  <div class="flex flex-col items-center justify-center gap-2">
+                    <svg class="w-8 h-8 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                    </svg>
+                    No projects tracked yet. Add one to get started!
+                  </div>
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-900 bg-slate-950/60 py-6 text-center text-xs text-slate-600 font-medium">
+    <div class="max-w-7xl mx-auto px-4">
+      &copy; 2026 Vantyron Consulting. Built with Flask, SQLite, and Chart.js.
+    </div>
+  </footer>
+
+  <!-- Dialog: Add Project Modal -->
+  <dialog id="dialog-add-project" class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-lg w-full p-6 text-slate-100 backdrop:bg-slate-950/80 backdrop:backdrop-blur-sm focus:outline-none overflow-hidden">
+    <div class="flex justify-between items-center pb-4 border-b border-slate-800">
+      <h2 class="text-lg font-bold text-white">Add New Project</h2>
+      <button type="button" class="btn-close-dialog text-slate-400 hover:text-white transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <form action="{{ url_for('add_project') }}" method="POST" class="mt-4 space-y-5" id="form-add-project">
+      
+      <!-- Title -->
+      <div class="flex flex-col gap-1.5">
+        <label for="add-title" class="text-xs font-bold uppercase tracking-wider text-slate-400">Project Title</label>
+        <input 
+          type="text" 
+          id="add-title" 
+          name="title" 
+          required 
+          placeholder="e.g. Redesign Landing Page"
+          class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+        >
+      </div>
+
+      <!-- Project Tag -->
+      <div class="flex flex-col gap-1.5">
+        <label for="add-tag" class="text-xs font-bold uppercase tracking-wider text-slate-400">Project Tag</label>
+        <select 
+          id="add-tag" 
+          name="tag" 
+          class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+        >
+          <option value="Web Dev">Web Dev</option>
+          <option value="Design">Design</option>
+          <option value="Writing">Writing</option>
+          <option value="Consulting">Consulting</option>
+          <option value="Marketing">Marketing</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <!-- Type (Radio) -->
+      <div class="flex flex-col gap-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Project Category</span>
+        <div class="grid grid-cols-2 gap-4">
+          <label class="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 cursor-pointer hover:border-slate-700 transition-colors">
+            <input 
+              type="radio" 
+              name="type" 
+              value="Personal" 
+              checked 
+              class="accent-indigo-500 w-4 h-4"
+              onchange="toggleEarningsInput(this.value, 'add')"
+            >
+            <span class="text-sm font-semibold text-slate-300">Personal</span>
+          </label>
+          <label class="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 cursor-pointer hover:border-slate-700 transition-colors">
+            <input 
+              type="radio" 
+              name="type" 
+              value="Freelance" 
+              class="accent-emerald-500 w-4 h-4"
+              onchange="toggleEarningsInput(this.value, 'add')"
+            >
+            <span class="text-sm font-semibold text-slate-300">Freelance</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Timelines (Dates) -->
+      <div class="grid grid-cols-2 gap-4">
+        <div class="flex flex-col gap-1.5">
+          <label for="add-start-date" class="text-xs font-bold uppercase tracking-wider text-slate-400">Start Date</label>
+          <input 
+            type="date" 
+            id="add-start-date" 
+            name="start_date" 
+            required 
+            class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+          >
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="add-end-date" class="text-xs font-bold uppercase tracking-wider text-slate-400">End Date</label>
+          <input 
+            type="date" 
+            id="add-end-date" 
+            name="end_date" 
+            required 
+            class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+          >
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div class="flex flex-col gap-1.5">
+        <label for="add-status" class="text-xs font-bold uppercase tracking-wider text-slate-400">Status</label>
+        <select 
+          id="add-status" 
+          name="status" 
+          class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+        >
+          <option value="Not Started">Not Started</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Completed">Completed</option>
+        </select>
+      </div>
+
+      <!-- Earnings (Hidden for Personal by default) -->
+      <div id="add-earnings-wrapper" class="flex flex-col gap-1.5 hidden">
+        <label for="add-earnings" class="text-xs font-bold uppercase tracking-wider text-emerald-400">Project Earnings ($)</label>
+        <input 
+          type="number" 
+          step="0.01" 
+          min="0" 
+          id="add-earnings" 
+          name="earnings" 
+          placeholder="0.00"
+          class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+        >
+      </div>
+
+      <!-- Submit buttons -->
+      <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+        <button 
+          type="button" 
+          class="btn-close-dialog px-4 py-2.5 rounded-xl border border-slate-800 text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+        >
+          Cancel
+        </button>
+        <button 
+          type="submit" 
+          class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 text-sm font-semibold text-white hover:shadow-lg hover:shadow-indigo-500/20 transition-all duration-150"
+        >
+          Save Project
+        </button>
+      </div>
+
+    </form>
+  </dialog>
+
+  <!-- Dialog: Edit Project Modal -->
+  <dialog id="dialog-edit-project" class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-lg w-full p-6 text-slate-100 backdrop:bg-slate-950/80 backdrop:backdrop-blur-sm focus:outline-none overflow-hidden">
+    <div class="flex justify-between items-center pb-4 border-b border-slate-800">
+      <h2 class="text-lg font-bold text-white">Edit Project</h2>
+      <button type="button" class="btn-close-dialog text-slate-400 hover:text-white transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- The form action is updated dynamically by JS -->
+    <form action="" method="POST" class="mt-4 space-y-5" id="form-edit-project">
+      
+      <!-- Title -->
+      <div class="flex flex-col gap-1.5">
+        <label for="edit-title" class="text-xs font-bold uppercase tracking-wider text-slate-400">Project Title</label>
+        <input 
+          type="text" 
+          id="edit-title" 
+          name="title" 
+          required 
+          class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+        >
+      </div>
+
+      <!-- Project Tag -->
+      <div class="flex flex-col gap-1.5">
+        <label for="edit-tag" class="text-xs font-bold uppercase tracking-wider text-slate-400">Project Tag</label>
+        <select 
+          id="edit-tag" 
+          name="tag" 
+          class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+        >
+          <option value="Web Dev">Web Dev</option>
+          <option value="Design">Design</option>
+          <option value="Writing">Writing</option>
+          <option value="Consulting">Consulting</option>
+          <option value="Marketing">Marketing</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <!-- Type (Radio) -->
+      <div class="flex flex-col gap-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Project Category</span>
+        <div class="grid grid-cols-2 gap-4">
+          <label class="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 cursor-pointer hover:border-slate-700 transition-colors">
+            <input 
+              type="radio" 
+              name="type" 
+              id="edit-type-personal"
+              value="Personal" 
+              class="accent-indigo-500 w-4 h-4"
+              onchange="toggleEarningsInput(this.value, 'edit')"
+            >
+            <span class="text-sm font-semibold text-slate-300">Personal</span>
+          </label>
+          <label class="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 cursor-pointer hover:border-slate-700 transition-colors">
+            <input 
+              type="radio" 
+              name="type" 
+              id="edit-type-freelance"
+              value="Freelance" 
+              class="accent-emerald-500 w-4 h-4"
+              onchange="toggleEarningsInput(this.value, 'edit')"
+            >
+            <span class="text-sm font-semibold text-slate-300">Freelance</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Timelines (Dates) -->
+      <div class="grid grid-cols-2 gap-4">
+        <div class="flex flex-col gap-1.5">
+          <label for="edit-start-date" class="text-xs font-bold uppercase tracking-wider text-slate-400">Start Date</label>
+          <input 
+            type="date" 
+            id="edit-start-date" 
+            name="start_date" 
+            required 
+            class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+          >
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="edit-end-date" class="text-xs font-bold uppercase tracking-wider text-slate-400">End Date</label>
+          <input 
+            type="date" 
+            id="edit-end-date" 
+            name="end_date" 
+            required 
+            class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+          >
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div class="flex flex-col gap-1.5">
+        <label for="edit-status" class="text-xs font-bold uppercase tracking-wider text-slate-400">Status</label>
+        <select 
+          id="edit-status" 
+          name="status" 
+          class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+        >
+          <option value="Not Started">Not Started</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Completed">Completed</option>
+        </select>
+      </div>
+
+      <!-- Earnings -->
+      <div id="edit-earnings-wrapper" class="flex flex-col gap-1.5 hidden">
+        <label for="edit-earnings" class="text-xs font-bold uppercase tracking-wider text-emerald-400">Project Earnings ($)</label>
+        <input 
+          type="number" 
+          step="0.01" 
+          min="0" 
+          id="edit-earnings" 
+          name="earnings" 
+          placeholder="0.00"
+          class="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+        >
+      </div>
+
+      <!-- Submit buttons -->
+      <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+        <button 
+          type="button" 
+          class="btn-close-dialog px-4 py-2.5 rounded-xl border border-slate-800 text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+        >
+          Cancel
+        </button>
+        <button 
+          type="submit" 
+          class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 text-sm font-semibold text-white hover:shadow-lg hover:shadow-indigo-500/20 transition-all duration-150"
+        >
+          Save Changes
+        </button>
+      </div>
+
+    </form>
+  </dialog>
+
+  <!-- Script for toggling earnings input -->
+  <script>
+    function toggleEarningsInput(type, prefix) {
+      const wrapper = document.getElementById(`${prefix}-earnings-wrapper`);
+      const input = document.getElementById(`${prefix}-earnings`);
+      if (type === 'Freelance') {
+        wrapper.classList.remove('hidden');
+        input.setAttribute('required', 'required');
+      } else {
+        wrapper.classList.add('hidden');
+        input.removeAttribute('required');
+        input.value = '0';
+      }
+    }
+  </script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Main JavaScript File -->
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
