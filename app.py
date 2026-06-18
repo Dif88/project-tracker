@@ -1,22 +1,65 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, Response
+from flask import Flask, render_template, request, redirect, url_for, jsonify, Response, session, flash
 from database import get_db_connection, dict_cursor, init_db
+from werkzeug.security import check_password_hash
+from functools import wraps
 import csv
 from io import StringIO
 import os
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'ptd-secret-f8a3c2e1b9d74056')
+
+# ── User accounts (username → hashed password) ───────────────────────────────
+USERS = {
+    'idrissa': 'scrypt:32768:8:1$G1YJuRnTyNDt3uSb$e85cb0625c91329a3683d8415acb008b485930674524cdbe9265b81e7fc6c78ded1c92b425534e4528cfef8514595d8b0f6a89037c4ae8cf3f6cd225dc6e89a7',
+    'mehemet': 'scrypt:32768:8:1$pKPtBStqIthtot9d$11b3ad01144a8afcf49157b7599463957f2888bc22d56d7649c8d5b6176f1a5b3e1c5f317e206f25d4bef8cd2682257e2ce5b083b9acddcff87d4982cc234966',
+}
+
+USER_DISPLAY_NAMES = {
+    'idrissa': 'Idrissa',
+    'mehemet': 'Mehemet',
+}
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
 
 # Ensure the database is initialized on startup
 init_db(force_recreate=False)
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if 'user' in session:
+        return redirect(url_for('index'))
+    error = None
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip().lower()
+        password = request.form.get('password', '')
+        hashed = USERS.get(username)
+        if hashed and check_password_hash(hashed, password):
+            session['user'] = username
+            session['display_name'] = USER_DISPLAY_NAMES[username]
+            return redirect(url_for('index'))
+        error = 'Invalid username or password.'
+    return render_template('login.html', error=error)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
 @app.route('/')
+@login_required
 def index():
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = dict_cursor(conn)
     cursor.execute("SELECT * FROM projects ORDER BY start_date DESC")
     projects = cursor.fetchall()
     
-    # Calculate summary metrics
     total_projects = len(projects)
     total_freelance_earnings = sum(p['earnings'] for p in projects if p['type'] == 'Freelance')
     active_personal_projects = sum(1 for p in projects if p['type'] == 'Personal' and p['status'] == 'In Progress')
@@ -32,6 +75,7 @@ def index():
     )
 
 @app.route('/add', methods=['POST'])
+@login_required
 def add_project():
     title = request.form.get('title', '').strip()
     project_type = request.form.get('type', 'Personal')
@@ -50,7 +94,7 @@ def add_project():
         earnings = 0.0
 
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = dict_cursor(conn)
     cursor.execute('''
         INSERT INTO projects (title, type, start_date, end_date, earnings, status, tag)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -61,6 +105,7 @@ def add_project():
     return redirect(url_for('index'))
 
 @app.route('/edit/<int:project_id>', methods=['POST'])
+@login_required
 def edit_project(project_id):
     title = request.form.get('title', '').strip()
     project_type = request.form.get('type', 'Personal')
@@ -79,7 +124,7 @@ def edit_project(project_id):
         earnings = 0.0
 
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = dict_cursor(conn)
     cursor.execute('''
         UPDATE projects
         SET title = %s, type = %s, start_date = %s, end_date = %s, earnings = %s, status = %s, tag = %s
@@ -91,18 +136,20 @@ def edit_project(project_id):
     return redirect(url_for('index'))
 
 @app.route('/delete/<int:project_id>', methods=['POST'])
+@login_required
 def delete_project(project_id):
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = dict_cursor(conn)
     cursor.execute("DELETE FROM projects WHERE id = %s", (project_id,))
     conn.commit()
     conn.close()
     return redirect(url_for('index'))
 
 @app.route('/export')
+@login_required
 def export_csv():
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = dict_cursor(conn)
     cursor.execute("SELECT id, title, type, start_date, end_date, earnings, status, tag FROM projects ORDER BY start_date DESC")
     rows = cursor.fetchall()
     conn.close()
@@ -113,14 +160,8 @@ def export_csv():
     
     for row in rows:
         cw.writerow([
-            row['id'],
-            row['title'],
-            row['type'],
-            row['start_date'],
-            row['end_date'],
-            row['earnings'],
-            row['status'],
-            row['tag']
+            row['id'], row['title'], row['type'], row['start_date'],
+            row['end_date'], row['earnings'], row['status'], row['tag']
         ])
         
     response = Response(si.getvalue(), mimetype='text/csv')
@@ -128,9 +169,10 @@ def export_csv():
     return response
 
 @app.route('/project/<int:project_id>')
+@login_required
 def project_detail(project_id):
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = dict_cursor(conn)
 
     cursor.execute("SELECT * FROM projects WHERE id = %s", (project_id,))
     project = cursor.fetchone()
@@ -149,7 +191,6 @@ def project_detail(project_id):
     expenses = cursor.fetchall()
 
     total_expenses = sum(e['amount'] for e in expenses)
-
     conn.close()
 
     return render_template(
@@ -162,6 +203,7 @@ def project_detail(project_id):
     )
 
 @app.route('/add-team-member/<int:project_id>', methods=['POST'])
+@login_required
 def add_team_member(project_id):
     name = request.form.get('name', '').strip()
     email = request.form.get('email', '').strip()
@@ -171,7 +213,7 @@ def add_team_member(project_id):
         return redirect(url_for('project_detail', project_id=project_id))
 
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = dict_cursor(conn)
     cursor.execute('''
         INSERT INTO team_members (project_id, name, email, role)
         VALUES (%s, %s, %s, %s)
@@ -182,16 +224,17 @@ def add_team_member(project_id):
     return redirect(url_for('project_detail', project_id=project_id))
 
 @app.route('/delete-team-member/<int:member_id>/<int:project_id>', methods=['POST'])
+@login_required
 def delete_team_member(member_id, project_id):
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = dict_cursor(conn)
     cursor.execute("DELETE FROM team_members WHERE id = %s", (member_id,))
     conn.commit()
     conn.close()
-
     return redirect(url_for('project_detail', project_id=project_id))
 
 @app.route('/add-activity/<int:project_id>', methods=['POST'])
+@login_required
 def add_activity(project_id):
     member_id = request.form.get('team_member_id')
     member_name = request.form.get('member_name', '').strip()
@@ -211,14 +254,14 @@ def add_activity(project_id):
 
     if not member_name and member_id:
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = dict_cursor(conn)
         cursor.execute("SELECT name FROM team_members WHERE id = %s", (member_id,))
         member = cursor.fetchone()
         member_name = member['name'] if member else 'Unknown'
         conn.close()
 
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = dict_cursor(conn)
     cursor.execute('''
         INSERT INTO team_activities (project_id, team_member_id, member_name, task_description, activity_date, activity_time, hours_spent, logged_by)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
@@ -229,16 +272,17 @@ def add_activity(project_id):
     return redirect(url_for('project_detail', project_id=project_id))
 
 @app.route('/delete-activity/<int:activity_id>/<int:project_id>', methods=['POST'])
+@login_required
 def delete_activity(activity_id, project_id):
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = dict_cursor(conn)
     cursor.execute("DELETE FROM team_activities WHERE id = %s", (activity_id,))
     conn.commit()
     conn.close()
-
     return redirect(url_for('project_detail', project_id=project_id))
 
 @app.route('/add-expense/<int:project_id>', methods=['POST'])
+@login_required
 def add_expense(project_id):
     amount = request.form.get('amount', '0')
     category = request.form.get('category', 'Other')
@@ -255,7 +299,7 @@ def add_expense(project_id):
         return redirect(url_for('project_detail', project_id=project_id))
 
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = dict_cursor(conn)
     cursor.execute('''
         INSERT INTO project_expenses (project_id, amount, category, description, expense_date, vendor)
         VALUES (%s, %s, %s, %s, %s, %s)
@@ -266,19 +310,20 @@ def add_expense(project_id):
     return redirect(url_for('project_detail', project_id=project_id))
 
 @app.route('/delete-expense/<int:expense_id>/<int:project_id>', methods=['POST'])
+@login_required
 def delete_expense(expense_id, project_id):
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = dict_cursor(conn)
     cursor.execute("DELETE FROM project_expenses WHERE id = %s", (expense_id,))
     conn.commit()
     conn.close()
-
     return redirect(url_for('project_detail', project_id=project_id))
 
 @app.route('/api/data')
+@login_required
 def api_data():
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = dict_cursor(conn)
 
     cursor.execute("SELECT title, earnings FROM projects WHERE type = 'Freelance' ORDER BY start_date ASC")
     freelance_rows = cursor.fetchall()
